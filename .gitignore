@@ -1,0 +1,9 @@
+docs/
+data/*.csv
+data/*.json
+data/*.png
+.DS_Store
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+.env*
