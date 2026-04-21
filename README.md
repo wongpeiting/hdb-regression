@@ -12,6 +12,9 @@ What predicts HDB resale prices in Singapore? A regression analysis of ~50,000 r
 6. **Multivariable regression** — build up a 10-model progression, final model explains 90.2% of price variance
 7. **Period comparison** — run the same model on 2022–2024 vs 2024–2026 to test stability
 8. **Lease decay over time** — track how the market's pricing of remaining lease changed from 1990 to 2025
+9. **Interactions** — test storey×town, remaining_lease×town, floor_area×CBD distance
+10. **Matched pairs** — find real transaction pairs to illustrate findings (columbarium, block 4, temple, "168", flats with 5+ disadvantages)
+11. **Log price model** — rerun with ln(price) as dependent variable, Terrace interaction, residual analysis
 
 ## Data
 
