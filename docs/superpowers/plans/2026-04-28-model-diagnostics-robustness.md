@@ -134,9 +134,7 @@ OLS assumes residuals are normally distributed. With n = 50,718 and robust stand
 Cell (code):
 ```r
 %%R -w 900 -h 450
-# Helper functions (moments package not installed)
-skew <- function(x) { m <- mean(x); s <- sd(x); mean(((x - m) / s)^3) }
-kurt <- function(x) { m <- mean(x); s <- sd(x); mean(((x - m) / s)^4) }
+library(moments)
 
 par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
 
@@ -146,7 +144,7 @@ qqnorm(raw_resid, main = 'Raw Model 10 residuals',
        pch = '.', col = 'grey40', cex = 0.8)
 qqline(raw_resid, col = 'red', lwd = 2)
 mtext(sprintf('Skewness: %.2f  |  Kurtosis: %.2f',
-    skew(resid(model10)), kurt(resid(model10))),
+    skewness(resid(model10)), kurtosis(resid(model10))),
     side = 3, line = 0, cex = 0.8)
 
 # Log model Q-Q
@@ -155,7 +153,7 @@ qqnorm(log_resid, main = 'Log Model 10 residuals',
        pch = '.', col = 'grey40', cex = 0.8)
 qqline(log_resid, col = 'red', lwd = 2)
 mtext(sprintf('Skewness: %.2f  |  Kurtosis: %.2f',
-    skew(resid(model_log)), kurt(resid(model_log))),
+    skewness(resid(model_log)), kurtosis(resid(model_log))),
     side = 3, line = 0, cex = 0.8)
 ```
 
