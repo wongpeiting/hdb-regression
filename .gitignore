@@ -1,10 +1,10 @@
-docs/
 data/*.csv
 data/*.json
 data/*.png
+data/*.svg
 .DS_Store
 .ipynb_checkpoints/
 __pycache__/
 *.pyc
 .env*
-memo.txt
+cache/
