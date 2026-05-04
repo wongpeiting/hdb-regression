@@ -1,0 +1,158 @@
+REGRESSION EXPLAINER — ELI5 NOTES
+===================================
+
+WHAT IS A REGRESSION?
+---------------------
+
+You have 50,000 HDB flats that sold in the last 2 years. Each one sold for a specific price. You want to figure out what makes some flats sell for more than others.
+
+The regression is basically saying: "Give me a formula that predicts the price of any flat, using things I know about it."
+
+The simplest version:
+
+  Predicted price = some base number + adjustments for each thing we know
+
+For example: start at $500K, then add $5,000 for each floor up, subtract $16,000 for each km from CBD, etc. The formula finds the best numbers to fill in so the predictions are as close to the real prices as possible.
+
+The R-squared (0.937) means: 93.7% of why flats sell for different prices can be explained by the variables in our formula. The remaining ~6% is stuff I can't measure -- renovation, view, the seller's desperation, etc.
+
+
+HOW I BUILT THE MODEL IN STAGES
+----------------------------------
+
+I didn't throw everything into the formula at once. I added variables in groups, one at a time, to see how much each group improves the predictions.
+
+Step 1: Where is the flat? (Town + flat type)
+Just knowing "it's a 4-room in Bishan" vs "a 3-room in Woodlands" already explains 63% of price differences. Location is the single biggest thing.
+
+Step 2: How big and how high? (Floor area + storey)
+Adding size and floor bumps it to 72%.
+
+Step 3: How much lease is left? (Remaining lease)
+Big jump -- from 72% to 85.6%. A flat with 90 years left is worth much more than one with 50 years left, even if everything else is the same.
+
+Step 4: What design era? (Flat model -- DBSS, Maisonette, etc.)
+Some designs are more desirable. Now at 87.2%.
+
+Steps 5-7: Geography + feng shui + superstition
+Distances to MRT, hawker, columbarium, temple; price digits, block 4, CNY. Each adds a little more. Now at 89.3%.
+
+Step 8: Month fixed effects
+Prices rose during the 2-year window, so controlling for when it sold matters. Now at 90.2%.
+
+Step 9: Interaction terms
+The simple model says: "every floor up adds $5,399." That's the same whether you're in Bishan or Woodlands. But that's not how the market works -- a high floor in Bishan with a skyline view is worth way more than a high floor in Woodlands with a view of another block.
+
+Interaction terms fix this. Instead of one rule for the whole country, the model gets a separate rule per town. "In Bishan, each floor adds $8,000. In Woodlands, each floor adds $3,500." Same idea for lease -- losing a year of lease in Bukit Timah costs more than losing a year in Yishun, because the per-year value of living in a prime location is higher. And for floor area -- an extra square metre near the CBD is worth more than one in the suburbs.
+
+This is why R² jumps from 90.2% to 93.7%. The model was already good, but it was applying one-size-fits-all rules to 26 very different towns. Letting it customise those rules by location explains another 3.5% of price variation. The trade-off: ~50 more parameters, which means more complexity and the need for a larger dataset to support it.
+
+At each step, I ran a statistical test (ANOVA) that checks whether the improvement is real or just by chance. Every addition passed.
+
+After the model was built, I tried to break the findings four different ways:
+
+- Hold-out validation: I hid 1/3 of the data, built the model on the other 2/3, then asked it to predict the hidden flats. It did just as well on flats it had never seen -- meaning it learned real patterns, not quirks of the specific dataset.
+
+- Median regression: The normal model tries to get the average prediction right. But what if a few crazy transactions ($1.6M penthouses, heritage flats) are skewing the average? Median regression ignores extremes and focuses on the typical flat. The trailing-8 premium and block-4 penalty both survived.
+
+- Outlier removal (Cook's distance): I found the transactions that were pulling the model the hardest -- the ones that, if removed, would change the results the most. Then I removed them. The trailing-8 premium actually got stronger ($1,070 → $1,354). So it wasn't being propped up by a few weird sales.
+
+- Log-price model: Instead of predicting dollars, I predicted the log of the price -- which is like predicting percentage differences instead of dollar differences. Same findings. This rules out the possibility that results depend on how I measured the price.
+
+
+WHAT IS ANOVA?
+--------------
+
+ANOVA asks: "Did the model actually get better, or did it just get more complicated?"
+
+When you add new variables to a formula, R-squared will always go up -- even if you add random nonsense. More variables = more chances to fit the data, even by accident.
+
+ANOVA compares the simpler model (before) and the richer model (after) and asks: "Is the improvement big enough that it's extremely unlikely to have happened by chance?"
+
+If yes (p < 0.05), the new variables genuinely help. If not, they're just adding complexity without improving predictions -- drop them.
+
+Example from our work: the superstition variables improved R-squared by only 0.001. Looks like noise. But ANOVA said: no, even this small improvement is statistically real (p < 0.05), because with 50,000 transactions I can detect even small genuine effects.
+
+Why do I need ANOVA when regression already gives p-values?
+
+The regression p-values tell you about individual variables -- is this one variable significant? ANOVA tells you about groups of variables together -- did this whole batch improve the model?
+
+Say you add 10 superstition variables at once. Individually, maybe 3 are significant and 7 aren't. The regression p-values tell you which ones. But ANOVA answers: "Should I have bothered with superstition at all?" Maybe those 3 significant ones are only significant by chance because you tested 10 things.
+
+
+WHAT IS A P-VALUE?
+------------------
+
+The p-value answers: "If this variable actually had zero effect on price, how likely is it that I'd see a result this strong just by coincidence?"
+
+Example: block_has_4 has p < 0.0000000000000002 (the "< 2.2e-16" in the table). That means: if blocks with 4 in the number had genuinely no effect on price, the chance of seeing a $10,133 discount this consistent across 50,000 transactions is essentially zero. So I'm confident the effect is real.
+
+Counter-example: num_fours_tail had p = 0.33. That means: even if 4s in trailing price digits had zero real effect, there's a 33% chance you'd see a result this size from random noise. It's too high to trust, so I dropped it.
+
+The threshold is p < 0.05 -- less than a 5% chance the result is a fluke. Everything in the final model (Model 12) clears that bar. Two variables that looked significant early on -- price_has_168 and cny_month -- were later dropped because they failed stress tests.
+
+The catch with large samples: With 50,000 transactions, even tiny effects become statistically significant. The superstition variables add only 0.2% to R-squared -- barely anything -- but they clear p < 0.05 easily. Statistically real doesn't mean practically important. That's why it's important to look at both the p-value (is it real?) and the R-squared contribution (does it matter?).
+
+
+WHAT ARE ROBUST STANDARD ERRORS?
+---------------------------------
+
+Standard errors tell you how much your coefficient might wobble if you ran the same regression on a different sample of 50,000 flats. Small standard error = stable estimate. Large = could change a lot.
+
+Regular standard errors assume the model's prediction errors are roughly the same size everywhere -- a $200K flat and a $1.5M flat would have similar-sized errors. That assumption is wrong for housing data. Expensive flats have much bigger prediction errors (a penthouse might sell for $200K above or below prediction, while a 2-room flat is only $20K off).
+
+Robust standard errors fix this. They say: "I won't assume the errors are the same size everywhere -- I'll calculate the standard errors based on how the errors actually behave in the data."
+
+What changes: The coefficients stay exactly the same. Only the standard errors (and therefore the p-values) change. Usually they get a bit larger, which means some borderline-significant variables might become insignificant. Everything in Model 12 stayed significant even with robust standard errors, which is reassuring.
+
+
+WHY DO WE ASSUME THERE ARE ERRORS?
+------------------------------------
+
+There are always errors. Every regression has them -- they're not a flaw in the work, they're a fact of life.
+
+The "error" (also called "residual") is just the gap between what the model predicts and what actually happened. The model predicts a flat should sell for $500K. It actually sold for $530K. That $30K gap is the error.
+
+Why does the gap exist? Because no formula can perfectly predict every flat's price. Two identical flats in the same block can sell for different prices because:
+- One was freshly renovated, the other wasn't
+- One has an unblocked view, the other faces a wall
+- One seller was desperate, the other could wait
+- The buyer fell in love with the flat and paid more
+- Pure randomness in negotiation
+
+I don't have data on any of those things. So the model does its best with what it has (location, size, floor, lease, etc.) and the leftover gap is the error. 93.7% R-squared means the formula captures 93.7% of price variation. The other ~6% is the errors -- stuff we can't measure.
+
+The robust standard errors question is about whether those errors follow a neat pattern or a messy one. Housing errors are messy (bigger errors for expensive flats), so I adjust for that.
+
+
+WHY LOG PRICE MAKES MORE SENSE
+--------------------------------
+
+Say two flats are both predicted wrong by $50,000:
+
+- Flat A costs $200,000, predicted $250,000 -- that's a 25% miss
+- Flat B costs $1,500,000, predicted $1,550,000 -- that's a 3% miss
+
+The raw model treats both as equally wrong ($50K off). But that's clearly not true -- the $200K flat prediction is way worse.
+
+The log model works on percentages, so it says: "being 25% off is much worse than 3% off." It tries harder to get the cheap flats right, and doesn't waste effort chasing $50K precision on a $1.5M flat where that's just rounding error.
+
+With interaction terms added (Model 12), the raw model now performs almost identically to the log model (93.7% vs 93.8%). But the log model still has one advantage: it can never predict a negative price (because exp(anything) > 0). The raw model predicted -$1,065 for one flat in Changi Village. The log model predicted $230K for the same flat -- still wrong (heritage premium I can't measure) but at least a real number.
+
+The trade-off: log coefficients are in percentages, not dollars. "Each floor adds 0.7%" instead of "$5,399." Less punchy for a story. That's why I used raw price for the main model but tested log as a robustness check. The findings are the same either way.
+
+
+FAQ
+---------------------------------
+
+"Why only 2 years of data?"
+Because the relationship between variables and price changes over time. Policy changes (cooling measures, TDSR, lease decay warnings) shift how the market works. Pooling 35 years would average across different markets and the coefficients would describe none of them.
+
+"Why raw price instead of log price?"
+So the coefficients are in dollars. "Each floor up adds $5,399" is easier to explain than "each floor up adds 0.8% to price." The trade-off is that the model is less precise at the extremes.
+
+"Isn't 93.7% R-squared suspiciously high?"
+Not for housing. Location alone explains 63%. Flats are a standardised product (unlike, say, paintings or used cars), so a few variables go a long way. The remaining ~6% is the stuff that makes each flat unique -- view, renovation, seller urgency.
+
+"How do you know correlation isn't causation?"
+You don't. The whole model is associational. "Blocks with 4 sell for less" doesn't prove the number 4 caused it -- maybe those blocks happen to be older or in worse locations. But I controlled for location, age, size, floor, and lease, and the effect persists. That's as close as observational data gets.
