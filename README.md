@@ -1,8 +1,10 @@
 # HDB Resale Price Regression
 
-What predicts HDB resale prices in Singapore? A regression analysis of 51,748 recent transactions (May 2024 – April 2026) and a 35-year historical trend analysis of 976,261 transactions (1990–2026). Built for data journalism — the coefficients are the story, the residuals are the leads.
+This project analyses what drives HDB resale prices in Singapore, using a regression model (R²=0.9403) trained on 52,000 transactions from May 2024 to April 2026 and a historical analysis of almost a million transactions spanning 35 years (1990-2026).
 
-The final model (log-price with terrace interaction and cubic lease term, 88 variables) explains 94% of resale price variance. Key finding: number-linked superstitions have a measurable effect on HDB prices, and the effect has grown roughly sevenfold since the early 1990s.
+The exploratory data analysis phase led me down several interesting paths, including the effect of policy announcements on how fast lease decay kicks into homebuyer consciousness in Singapore, but the first story that I wanted to tell was one I feel would have been difficult to show convincingly without the backing of regression analysis: the effect of number-linked superstitions on resale prices. 
+
+I came away finding that both trailing 8s in sale prices and the digit 4 in block numbers have statistically significant effects on HDB resale values, with these effects strengthening over time, even after controlling for location, flat type, size, floor, remaining lease, proximity to amenities, month of sale, and structural differences in terrace houses and lease depreciation.
 
 ## Notebooks
 
@@ -36,6 +38,16 @@ The final model (log-price with terrace interaction and cubic lease term, 88 var
 - **Trailing-8 premium:** Each trailing 8 in the price adds about $1,600 (0.25%). Survives every robustness check including outlier removal and raw-price specification.
 - **888 prevalence:** 0.02% of transactions ended in 888 in 1990–91. By 2024–25, 9.4% did.
 - **168 anchor:** 24 flats priced at exactly $1,168,000–$1,168,888 all sold above predicted value, by $105,000 on average (10%).
+
+## Methodology
+
+The model uses a log-price specification with 88 variables, controlling for town, flat type, floor area, storey range, remaining lease (with quadratic and cubic terms to capture accelerating depreciation), flat model, proximity to MRT stations, hawker centres, popular schools, hospitals, parks, temples, columbaria and the central business district, month of sale, and a floor area adjustment for terrace houses. The typical prediction is off by about $28,000, or roughly 4% of a median flat's price.
+
+**Overfitting check:** The model was trained on two-thirds of the data and tested on the remaining third. R² dropped from 0.9407 to 0.9394 — a 0.1% decline. The results were also tested with a raw-price specification; both produced consistent findings.
+
+**Robustness:** The trailing-8 premium and block-4 penalty are both significant at the 99.9% confidence level in every specification tested. The trailing-8 premium strengthened slightly from about $1,600 to $1,700 when the most influential transactions were removed (Cook's D). The block-4 penalty fell from about $8,500 to $6,700 but remained significant. The block-4 historical figures ($600 in 1990–91, $13,200 in 2024–25) come from running the same model on each two-year period separately.
+
+**Dollar equivalents:** The log model produces percentage coefficients. This project converts them to dollar equivalents at the median flat price ($620,000) for readability: a premium of $1,600 per trailing 8 is more intuitive than 0.25%.
 
 ## Data
 
