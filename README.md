@@ -43,6 +43,9 @@ I came away finding that both trailing 8s in sale prices and the digit 4 in bloc
 
 The model uses a log-price specification with 88 variables, controlling for town, flat type, floor area, storey range, remaining lease (with quadratic and cubic terms to capture accelerating depreciation), flat model, proximity to MRT stations, hawker centres, popular schools, hospitals, parks, temples, columbaria and the central business district, month of sale, and a floor area adjustment for terrace houses. The typical prediction is off by about $28,000, or roughly 4% of a median flat's price.
 
+<img width="2200" height="1600" alt="Image" src="https://github.com/user-attachments/assets/49933c85-510b-4606-8e73-2f1047cec6e6" />
+<img width="1800" height="900" alt="Image" src="https://github.com/user-attachments/assets/c81a6334-2340-46d5-b10e-9f74e5af77e0" />
+
 **Overfitting check:** The model was trained on two-thirds of the data and tested on the remaining third. R² dropped from 0.9407 to 0.9394 — a 0.1% decline. The results were also tested with a raw-price specification; both produced consistent findings.
 
 **Robustness:** The trailing-8 premium and block-4 penalty are both significant at the 99.9% confidence level in every specification tested. The trailing-8 premium strengthened slightly from about $1,600 to $1,700 when the most influential transactions were removed (Cook's D). The block-4 penalty fell from about $8,500 to $6,700 but remained significant. The block-4 historical figures ($600 in 1990–91, $13,200 in 2024–25) come from running the same model on each two-year period separately.
